@@ -4,6 +4,7 @@ ENV PYTHONUNBUFFERED=1
 ENV SOURCE_URL="http://localhost:8081/?action=stream"
 
 COPY . /
+RUN		apt update -q && apt upgrade -qy && apt clean
 RUN		pip3 install -r /requirements.txt
 
 EXPOSE 54321
