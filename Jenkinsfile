@@ -1,6 +1,8 @@
 pipeline{
 	agent any
-
+	options {
+		parallelsAlwaysFailFast()
+	}
 	environment {
 		IMAGE_NAME="hdavid0510/mjpeg-relay"
 		IMAGE_TAG="dev"
