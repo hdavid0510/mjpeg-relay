@@ -8,6 +8,7 @@ RUN	apt -qq  -o=Dpkg::Use-Pty=0 update  \
 &&	apt -qqy -o=Dpkg::Use-Pty=0 upgrade \
 &&	apt -qqy -o=Dpkg::Use-Pty=0 clean \
 &&	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+&&	pip3 install -U pip \
 &&	pip3 install -r /requirements.txt \
 &&	pip3 cache purge
 
