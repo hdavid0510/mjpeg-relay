@@ -1,2 +1,11 @@
-.git
-__pycache__
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.git/
+.gitignore
+LICENSE
+tests/
+docs/
+*.md
