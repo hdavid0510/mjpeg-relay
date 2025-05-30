@@ -1,11 +1,22 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim AS builder
 
-ENV PYTHONUNBUFFERED=1
-ENV SOURCE_URL="http://localhost:8081/?action=stream"
+RUN	apt-get update \
+	&& apt-get install -y build-essential gcc libffi-dev python3-dev \
+	&& rm -rf /var/lib/apt/lists/*
 
-COPY . /
-RUN	pip3 install -r /requirements.txt
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --upgrade pip wheel \
+	&& pip wheel --no-cache-dir -r requirements.txt -w /build/wheels
 
-EXPOSE 54321
-EXPOSE 54322
-CMD ["python", "/relay.py"]
+
+FROM python:3.12-slim AS runtime
+
+COPY --from=builder /build/wheels /wheels
+RUN pip install --no-cache-dir --find-links=/wheels uvloop aiohttp
+
+WORKDIR /app
+COPY . .
+
+EXPOSE 54321 54322
+ENTRYPOINT ["python", "relay.py"]
