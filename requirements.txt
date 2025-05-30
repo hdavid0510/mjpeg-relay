@@ -1,2 +1,2 @@
-requests
-SimpleWebSocketServer
+aiohttp
+uvloop ; sys_platform != 'win32'
