@@ -21,4 +21,5 @@ WORKDIR /app
 COPY . .
 
 EXPOSE 54321 54322
-ENTRYPOINT ["python", "relay.py"]
+ENTRYPOINT ["python"]
+CMD ["relay.py"]

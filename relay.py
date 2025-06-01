@@ -89,12 +89,17 @@ def parse_cli():
 	p = argparse.ArgumentParser(
 		description="High-efficiency MJPEG relay (asyncio + aiohttp)"
 	)
-	p.add_argument("source_url", help="URL of the MJPEG source stream")
+	p.add_argument("source_url", nargs="?", default=os.environ.get("SOURCE_URL"),
+					help="URL of the MJPEG source stream (or set SOURCE_URL env)")
 	p.add_argument("-p", "--port",   type=int, default=54321,
-				   help="HTTP port for relayed MJPEG")
+					help="HTTP port for relayed MJPEG")
 	p.add_argument("-w", "--wsport", type=int, default=54322,
-				   help="WebSocket port for binary frames")
-	return p.parse_args()
+					help="WebSocket port for binary frames")
+	args = p.parse_args()
+	if not args.source_url:
+		p.print_help()
+		sys.exit(1)
+	return args
 
 
 async def main():
