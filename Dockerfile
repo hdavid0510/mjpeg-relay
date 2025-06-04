@@ -17,7 +17,9 @@ RUN pip install --no-cache-dir --find-links=/wheels uvloop aiohttp \
 	&& pip uninstall -y pip setuptools wheel || true
 
 WORKDIR /app
-COPY . .
+COPY relay.py .
+COPY dashboard.html .
+COPY static/ ./static/
 
 EXPOSE 54321 54322
 ENTRYPOINT ["python", "relay.py"]

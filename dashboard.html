@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Relay Dashboard</title>
+	<link rel="stylesheet" href="/static/dashboard.css">
+</head>
+
+<body>
+	<div id="header">
+		Last updated: <span id="last_updated">--</span>
+	</div>
+
+	<h1>Relay Status Dashboard</h1>
+	<div id="metrics">
+		<div class="metric-box">
+			<h2>Uptime</h2>
+			<div id="uptime" class="metric-value">--:--:--</div>
+		</div>
+		<div class="metric-box">
+			<h2>Inbound Traffic</h2>
+			<div id="received" class="metric-value">-- MB</div>
+			<div id="bandwidth" style="font-size:0.9em;">-- Mbps</div>
+		</div>
+		<div class="metric-box">
+			<h2>Clients</h2>
+			<div id="connection_count" class="metric-value">--</div>
+		</div>
+	</div>
+
+	<h2>Connected IPs</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>IP Address</th>
+				<th>Since</th>
+				<th>Outbound Traffic</th>
+			</tr>
+		</thead>
+		<tbody id="client_table_body">
+			<tr>
+				<td colspan="3">Loading...</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<script src="/static/dashboard.js"></script>
+</body>
+
+</html>
