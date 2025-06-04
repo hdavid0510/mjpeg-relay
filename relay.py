@@ -2,6 +2,7 @@
 
 import sys
 import os
+import types
 import time
 from datetime import datetime, timedelta
 import argparse
@@ -148,10 +149,10 @@ async def websocket_feed(request):
 async def status_report(request):
 	"""Return JSON status"""
 	app = request.app
-	elapsed = time.time() - app['start_time']
-	total_bytes = app['bytes_sent']
+	elapsed = time.time() - app.state.start_time
+	total_bytes = app.state.bytes_sent
 	avg_bps = (total_bytes / elapsed) if elapsed > 0 else 0.0
-	clients = app['clients']
+	clients = app.state.clients
 
 	# Build list of client dicts
 	connected_list = []
@@ -228,6 +229,7 @@ async def main():
 
 	# setup web server
 	app = web.Application()
+	app.state = types.SimpleNamespace()
 	app.state.store = store
 	app.state.clients = {}       # dict[ip] → {"since": <epoch>, "bytes_sent": <int>}
 	app.state.bytes_sent = 0     # total bytes sent (since start)
