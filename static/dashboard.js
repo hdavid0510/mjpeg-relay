@@ -1,12 +1,13 @@
 function pad(n) { return n < 10 ? "0" + n : n; }
 
 function formatHMS(totalSeconds) {
-	// Convert raw seconds → "H:MM:SS"
+	// Convert raw seconds → "HH:MM:SS"/"D:HH:MM:SS"
 	totalSeconds = Math.floor(totalSeconds);
 	const hh = pad(Math.floor(totalSeconds / 3600));
 	const mm = pad(Math.floor((totalSeconds % 3600) / 60));
 	const ss = pad(totalSeconds % 60);
-	return `${hh}:${mm}:${ss}`;
+	if (totalSeconds < 86400) return `${hh}:${mm}:${ss}`;
+	else return `${Math.floor(totalSeconds / 86400)}:${hh}:${mm}:${ss}`;
 }
 
 function formatTimestamp(epochSec) {
