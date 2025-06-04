@@ -1,8 +1,7 @@
 FROM python:3.13-slim AS builder
 
-RUN	apt-get update -q \
-	&& apt-get install -qy build-essential gcc libffi-dev python3-dev \
-	&& rm -rf /var/lib/apt/lists/*
+RUN	apt-get update -qq \
+	&& apt-get install -qy build-essential gcc libffi-dev python3-dev
 
 WORKDIR /build
 COPY requirements.txt .
@@ -21,5 +20,5 @@ WORKDIR /app
 COPY . .
 
 EXPOSE 54321 54322
-ENTRYPOINT ["python"]
-CMD ["relay.py"]
+ENTRYPOINT ["python", "relay.py"]
+CMD []
