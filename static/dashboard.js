@@ -54,7 +54,9 @@ function fetchStatus() {
 			document.getElementById('uptime').textContent = formatHMS(data.uptime);
 			document.getElementById('received').textContent = humanBytes(data.inbound_bytes);
 			document.getElementById('bandwidth').textContent = humanBps(data.inbound_bps);
-			document.getElementById('connection_count').textContent = data.clients.length;
+			const onlineCount = data.clients.filter(c => c.online).length;
+			document.getElementById('connection_count').textContent = onlineCount;
+
 
 			const tbody = document.getElementById('client_table_body');
 			tbody.innerHTML = ''; // clear existing
