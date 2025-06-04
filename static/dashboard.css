@@ -84,8 +84,12 @@ tbody tr:nth-child(odd) {
 	background-color: #242424;
 }
 
-#footer {
-	margin-top: 30px;
+.offline {
+	opacity: 0.5;
+}
+
+#header {
+	margin-bottom: 30px;
 	font-size: 0.9em;
 	color: #aaaaaa;
 }

@@ -1,7 +1,7 @@
 function pad(n) { return n < 10 ? "0" + n : n; }
 
 function formatHMS(totalSeconds) {
-	// Convert a raw number of seconds → "H:MM:SS"
+	// Convert raw seconds → "H:MM:SS"
 	totalSeconds = Math.floor(totalSeconds);
 	const hh = pad(Math.floor(totalSeconds / 3600));
 	const mm = pad(Math.floor((totalSeconds % 3600) / 60));
@@ -10,7 +10,7 @@ function formatHMS(totalSeconds) {
 }
 
 function formatTimestamp(epochSec) {
-	// epochSec is in seconds → Date object
+	// raw epoch (seconds) → "YYYY-MM-DD HH:MM:SS"
 	const date = new Date(epochSec * 1000);
 	const yyyy = date.getFullYear();
 	const MM = pad(date.getMonth() + 1);
@@ -34,7 +34,7 @@ function humanBytes(bytes) {
 }
 
 function humanBps(bps) {
-	// Convert bytes/sec to bits/sec → Mbps/Gbps
+	// Convert bytes/sec → bits/sec → K/M/G/Tbps
 	let bits = bps * 8;
 	if (bits < 1e3) return bits.toFixed(2) + " bps";
 	const units = ["Kbps", "Mbps", "Gbps", "Tbps"];
@@ -51,45 +51,59 @@ function fetchStatus() {
 	fetch('/status')
 		.then(response => response.json())
 		.then(data => {
-			// Uptime
 			document.getElementById('uptime').textContent = formatHMS(data.uptime);
+			document.getElementById('received').textContent = humanBytes(data.inbound_bytes);
+			document.getElementById('bandwidth').textContent = humanBps(data.inbound_bps);
+			document.getElementById('connection_count').textContent = data.clients.length;
 
-			// Inbound Bytes
-			document.getElementById('received').textContent = humanBytes(data.received);
-
-			// Inbound bps
-			document.getElementById('bandwidth').textContent = humanBps(data.bandwidth);
-
-			// Connected count
-			document.getElementById('connection_count').textContent = data.connection_count;
-
-			// Build table rows
+			// Build table rows for each client
 			const tbody = document.getElementById('client_table_body');
-			tbody.innerHTML = '';  // clear existing
-			if (data.connection.length === 0) {
+			tbody.innerHTML = ''; // clear existing
+
+			if (!data.clients || data.clients.length === 0) {
 				const row = document.createElement('tr');
 				const cell = document.createElement('td');
-				cell.colSpan = 3;
-				cell.textContent = 'No clients connected';
+				cell.colSpan = 4;
+				cell.textContent = 'No clients connected yet';
 				row.appendChild(cell);
 				tbody.appendChild(row);
 			} else {
-				data.connection.forEach(client => {
+				data.clients.forEach(client => {
 					const row = document.createElement('tr');
+					// If offline, add the "offline" CSS class
+					if (!client.online) {
+						row.classList.add('offline');
+					}
+
+					// IP address
 					const ipCell = document.createElement('td');
 					ipCell.textContent = client.ip;
+
+					// Since (raw epoch → human)
 					const sinceCell = document.createElement('td');
 					sinceCell.textContent = formatTimestamp(client.since);
+
+					// Outbound Traffic
 					const outCell = document.createElement('td');
-					outCell.textContent = humanBytes(client.sent);
+					outCell.textContent = humanBytes(client.outbound_bytes);
+
+					// Offline Since (if any)
+					const offlineCell = document.createElement('td');
+					if (client.offline_since) {
+						offlineCell.textContent = formatTimestamp(client.offline_since);
+					} else {
+						offlineCell.textContent = '';  // blank if online
+					}
+
 					row.appendChild(ipCell);
 					row.appendChild(sinceCell);
 					row.appendChild(outCell);
+					row.appendChild(offlineCell);
 					tbody.appendChild(row);
 				});
 			}
 
-			// Last updated
+			// Last updated (browser local time)
 			const now = new Date();
 			document.getElementById('last_updated').textContent = now.toLocaleString();
 		})
@@ -98,7 +112,6 @@ function fetchStatus() {
 		});
 }
 
-// Initial fetch
+// Initial fetch, then refresh every 2.5 seconds
 fetchStatus();
-// Refresh every 5 seconds
-setInterval(fetchStatus, 5000);
+setInterval(fetchStatus, 2500);

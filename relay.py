@@ -36,7 +36,7 @@ async def fetch_loop(source_url: str, store: FrameStore):
 			buffer = bytearray()
 			async for chunk in resp.content.iter_chunked(1024):
 				buffer.extend(chunk)
-				# find JPEG start and end markers
+				# Look for JPEG start/end markers
 				while True:
 					start = buffer.find(b'\xff\xd8')
 					end   = buffer.find(b'\xff\xd9')
@@ -60,21 +60,22 @@ async def mjpeg_stream(request):
 	now = time.time()
 
 	clients = request.app.state.clients
-	# On connect: create or bump the ref‐count
+	# On connect: if first time, create entry; otherwise bump count and clear offline_since
 	if ip not in clients:
 		clients[ip] = {
-			"since": now,
-			"bytes_sent": 0,
-			"count": 1
+			"since": now,        # when this IP first ever connected
+			"bytes_sent": 0,     # total accumulated bytes to this IP
+			"count": 1,          # reference count of active connections
+			"offline_since": None  # marked when count drops to 0
 		}
 	else:
 		clients[ip]["count"] += 1
+		clients[ip]["offline_since"] = None  # client is back online
 
 	async def frame_generator():
 		try:
 			while True:
 				frame = await store.subscribe()
-				# build one chunk per frame
 				part = (
 					f"--{boundary}\r\n".encode() +
 					b"Content-Type: image/jpeg\r\n" +
@@ -82,32 +83,33 @@ async def mjpeg_stream(request):
 					frame +
 					b"\r\n"
 				)
-				# global total bytes
+				# update global total and per-client total
 				request.app.state.bytes_sent += len(part)
-				# per‐IP bytes
 				clients[ip]["bytes_sent"] += len(part)
 				yield part
 		except asyncio.CancelledError:
 			raise
 		finally:
-			# On disconnect: decrement count, and only pop if it hits zero
+			# On disconnect: decrement count. If zero, mark offline but do not remove.
 			if ip in clients:
 				clients[ip]["count"] -= 1
 				if clients[ip]["count"] <= 0:
-					clients.pop(ip, None)
+					clients[ip]["offline_since"] = time.time()
 
 	return web.Response(body=frame_generator(), headers=headers)
 
+
 async def snapshot(request):
-	"""Handle single frame"""
+	"""Return the most recent JPEG frame (snapshot)"""
 	store: FrameStore = request.app.state.store
 	frame = store._frame
 	if not frame:
 		raise web.HTTPNotFound(text="No frame available yet")
 	return web.Response(body=frame, content_type='image/jpeg')
 
+
 async def websocket_feed(request):
-	"""WebSocket handler with per-client tracking"""
+	"""WebSocket handler (binary frames) with per-client tracking"""
 	store: FrameStore = request.app.state.store
 	ws = web.WebSocketResponse()
 	await ws.prepare(request)
@@ -116,64 +118,67 @@ async def websocket_feed(request):
 	now = time.time()
 
 	clients = request.app.state.clients
-	# On connect: create or bump the ref‐count
 	if ip not in clients:
 		clients[ip] = {
 			"since": now,
 			"bytes_sent": 0,
-			"count": 1
+			"count": 1,
+			"offline_since": None
 		}
 	else:
 		clients[ip]["count"] += 1
+		clients[ip]["offline_since"] = None
 
 	try:
 		while True:
 			frame = await store.subscribe()
 			await ws.send_bytes(frame)
-			# global total bytes
 			request.app.state.bytes_sent += len(frame)
-			# per‐IP bytes
 			clients[ip]["bytes_sent"] += len(frame)
 	except asyncio.CancelledError:
+		# client closed connection
 		pass
 	finally:
-		# On disconnect: decrement count, and only pop if it hits zero
+		# On disconnect: decrement count, mark offline if zero
 		if ip in clients:
 			clients[ip]["count"] -= 1
 			if clients[ip]["count"] <= 0:
-				clients.pop(ip, None)
+				clients[ip]["offline_since"] = time.time()
 		await ws.close()
 
 	return ws
 
-async def status_report(request):
-	"""Return JSON status"""
-	app = request.app
-	elapsed = time.time() - app.state.start_time
-	total_bytes = app.state.bytes_sent
-	avg_bps = (total_bytes / elapsed) if elapsed > 0 else 0.0
-	clients = app.state.clients
 
-	# Build list of client dicts
-	connected_list = []
-	for ip, info in clients.items():
-		connected_list.append({
-			"ip": ip,
-			"since": info["since"],
-			"sent": info["bytes_sent"]
+async def status_report(request):
+	"""Return JSON status including every client (online or offline)"""
+	app = request.app
+
+	elapsed     = time.time() - app.state.start_time  # seconds since start
+	total_bytes = app.state.bytes_sent
+	avg_bps     = (total_bytes / elapsed) if elapsed > 0 else 0.0
+	clients_dict = app.state.clients  # dict[ip] → {since, bytes_sent, count, offline_since}
+
+	client_list = []
+	for ip, info in clients_dict.items():
+		client_list.append({
+			"ip":             ip,
+			"since":          info["since"],           # raw UNIX timestamp (seconds)
+			"outbound_bytes": info["bytes_sent"],      # accumulated bytes from this IP
+			"online":         (info["count"] > 0),     # True if currently connected
+			"offline_since":  info["offline_since"]    # raw UNIX timestamp or None
 		})
 
 	payload = {
-		"uptime": elapsed,
-		"received": total_bytes,
-		"bandwidth": avg_bps,
-		"connection_count": len(connected_list),
-		"connection": connected_list
+		"uptime":        elapsed,                   # raw seconds
+		"inbound_bytes": total_bytes,
+		"inbound_bps":   avg_bps,
+		"clients":       client_list                # all clients ever seen during this run
 	}
 	return web.json_response(payload)
 
+
 async def dashboard(request):
-	"""Read dashboard.html from disk and return it"""
+	"""Serve dashboard.html verbatim"""
 	html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
 	try:
 		text = open(html_path, "r", encoding="utf-8").read()
@@ -181,30 +186,38 @@ async def dashboard(request):
 		raise web.HTTPNotFound(text="dashboard.html not found")
 	return web.Response(body=text, content_type="text/html")
 
-async def catch_all_redirect(request):
-	"""Always redirect to /dashboard for any unmatched path"""
-	raise web.HTTPFound("/dashboard")
-
 
 def parse_cli():
-	"""Parse arguments from CLI"""
+	"""Parse CLI args; shrink traceback if no SOURCE_URL is given"""
 	parser = argparse.ArgumentParser(
 		description="High-efficiency MJPEG relay (asyncio + aiohttp)"
 	)
 
-	def get_env_port(env:str, default:int):
+	def get_env_port(env: str, default: int):
 		try:
 			port = int(os.environ.get(env))
 		except (ValueError, TypeError):
 			return default
-		return port if 1<=port<65536 else default
-	
-	parser.add_argument("source_url", nargs="?", default=os.environ.get("SOURCE_URL"),
-					help="URL of the MJPEG source stream (or set SOURCE_URL env)")
-	parser.add_argument("-p", "--port",   type=int, default=get_env_port("PORT", 54321),
-					help="HTTP port for relayed MJPEG")
-	parser.add_argument("-w", "--wsport", type=int, default=get_env_port("WSPORT", 54322),
-					help="WebSocket port for binary frames")
+		return port if 1 <= port < 65536 else default
+
+	parser.add_argument(
+		"source_url",
+		nargs="?",
+		default=os.environ.get("SOURCE_URL"),
+		help="URL of MJPEG source stream (or set SOURCE_URL env)"
+	)
+	parser.add_argument(
+		"-p", "--port",
+		type=int,
+		default=get_env_port("PORT", 54321),
+		help="HTTP port for MJPEG + dashboard"
+	)
+	parser.add_argument(
+		"-w", "--wsport",
+		type=int,
+		default=get_env_port("WSPORT", 54322),
+		help="WebSocket port"
+	)
 	args = parser.parse_args()
 	if not args.source_url:
 		parser.print_help()
@@ -215,7 +228,7 @@ def parse_cli():
 async def main():
 	args = parse_cli()
 
-	# optional speed boost
+	# Optional: use uvloop if installed
 	try:
 		import uvloop
 		uvloop.install()
@@ -230,9 +243,9 @@ async def main():
 	# setup web server
 	app = web.Application()
 	app.state = types.SimpleNamespace()
-	app.state.store = store
-	app.state.clients = {}       # dict[ip] → {"since": <epoch>, "bytes_sent": <int>}
-	app.state.bytes_sent = 0     # total bytes sent (since start)
+	app.state.store      = store
+	app.state.clients    = {}
+	app.state.bytes_sent = 0
 	app.state.start_time = time.time()
 
 	app.add_routes([
@@ -243,25 +256,28 @@ async def main():
 		web.get('/dashboard', dashboard),
 	])
 
-	# Serve anything under /static/ from the local ./static folder
 	static_folder = os.path.join(os.path.dirname(__file__), "static")
 	app.router.add_static('/static/', static_folder, show_index=False)
+
+	# Redirect any unknown path → /dashboard
+	async def catch_all_redirect(request):
+		raise web.HTTPFound("/dashboard")
 	app.router.add_get("/{tail:.*}", catch_all_redirect)
 
 	runner = web.AppRunner(app)
 	await runner.setup()
-	listener_http = web.TCPSite(runner, '0.0.0.0', args.port)
+
+	listener_http      = web.TCPSite(runner, '0.0.0.0', args.port)
 	listener_websocket = web.TCPSite(runner, '0.0.0.0', args.wsport)
 	await listener_http.start()
 	await listener_websocket.start()
 
 	print(f"HTTP MJPEG on http://0.0.0.0:{args.port}/stream")
 	print(f"Snapshot   on http://0.0.0.0:{args.port}/snapshot")
-	print(f"WebSocket  on ws://0.0.0.0:{args.wsport}/ws")
+	print(f"WebSocket  on   ws://0.0.0.0:{args.wsport}/ws")
 	print(f"Stat JSON  on http://0.0.0.0:{args.port}/status")
 	print(f"Dashboard  on http://0.0.0.0:{args.port}/dashboard")
 
-	# keep running until cancelled
 	await fetch_task
 
 
