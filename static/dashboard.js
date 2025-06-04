@@ -56,10 +56,8 @@ function fetchStatus() {
 			document.getElementById('bandwidth').textContent = humanBps(data.inbound_bps);
 			document.getElementById('connection_count').textContent = data.clients.length;
 
-			// Build table rows for each client
 			const tbody = document.getElementById('client_table_body');
 			tbody.innerHTML = ''; // clear existing
-
 			if (!data.clients || data.clients.length === 0) {
 				const row = document.createElement('tr');
 				const cell = document.createElement('td');
@@ -75,30 +73,26 @@ function fetchStatus() {
 						row.classList.add('offline');
 					}
 
-					// IP address
 					const ipCell = document.createElement('td');
 					ipCell.textContent = client.ip;
 
-					// Since (raw epoch → human)
-					const sinceCell = document.createElement('td');
-					sinceCell.textContent = formatTimestamp(client.since);
+					const sentCell = document.createElement('td');
+					sentCell.textContent = humanBytes(client.outbound_bytes);
 
-					// Outbound Traffic
-					const outCell = document.createElement('td');
-					outCell.textContent = humanBytes(client.outbound_bytes);
+					const connectedCell = document.createElement('td');
+					connectedCell.textContent = formatTimestamp(client.since);
 
-					// Offline Since (if any)
-					const offlineCell = document.createElement('td');
+					const disconnectedCell = document.createElement('td');
 					if (client.offline_since) {
-						offlineCell.textContent = formatTimestamp(client.offline_since);
+						disconnectedCell.textContent = formatTimestamp(client.offline_since);
 					} else {
-						offlineCell.textContent = '';  // blank if online
+						disconnectedCell.textContent = '';
 					}
 
 					row.appendChild(ipCell);
-					row.appendChild(sinceCell);
-					row.appendChild(outCell);
-					row.appendChild(offlineCell);
+					row.appendChild(sentCell);
+					row.appendChild(connectedCell);
+					row.appendChild(disconnectedCell);
 					tbody.appendChild(row);
 				});
 			}
