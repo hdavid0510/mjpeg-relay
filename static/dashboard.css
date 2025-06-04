@@ -10,6 +10,26 @@ h1 {
 	margin-bottom: 10px;
 }
 
+#buttons {
+	margin-bottom: 20px;
+}
+
+.btn {
+	display: inline-block;
+	background-color: #444;
+	color: #fafafa;
+	padding: 10px 16px;
+	border-radius: 5px;
+	text-decoration: none;
+	font-size: 0.9em;
+	margin-right: 10px;
+	transition: background-color 0.2s ease;
+}
+
+.btn:hover {
+	background-color: #555;
+}
+
 #metrics {
 	display: flex;
 	gap: 30px;
