@@ -50,7 +50,7 @@ async def fetch_loop(source_url: str, store: FrameStore):
 
 async def mjpeg_stream(request):
 	"""Handle HTTP MJPEG stream, track per-client outbound bytes"""
-	store: FrameStore = request.app['store']
+	store: FrameStore = request.app.state.store
 	boundary = "frame"
 	headers = {
 		"Content-Type": f"multipart/x-mixed-replace; boundary=--{boundary}"
@@ -58,7 +58,7 @@ async def mjpeg_stream(request):
 	ip = request.remote or "unknown"
 	now = time.time()
 
-	clients = request.app['clients']
+	clients = request.app.state.clients
 	# On connect: create or bump the ref‐count
 	if ip not in clients:
 		clients[ip] = {
@@ -82,7 +82,7 @@ async def mjpeg_stream(request):
 					b"\r\n"
 				)
 				# global total bytes
-				request.app['bytes_sent'] += len(part)
+				request.app.state.bytes_sent += len(part)
 				# per‐IP bytes
 				clients[ip]["bytes_sent"] += len(part)
 				yield part
@@ -99,7 +99,7 @@ async def mjpeg_stream(request):
 
 async def snapshot(request):
 	"""Handle single frame"""
-	store: FrameStore = request.app['store']
+	store: FrameStore = request.app.state.store
 	frame = store._frame
 	if not frame:
 		raise web.HTTPNotFound(text="No frame available yet")
@@ -107,14 +107,14 @@ async def snapshot(request):
 
 async def websocket_feed(request):
 	"""WebSocket handler with per-client tracking"""
-	store: FrameStore = request.app['store']
+	store: FrameStore = request.app.state.store
 	ws = web.WebSocketResponse()
 	await ws.prepare(request)
 
 	ip = request.remote or "unknown"
 	now = time.time()
 
-	clients = request.app['clients']
+	clients = request.app.state.clients
 	# On connect: create or bump the ref‐count
 	if ip not in clients:
 		clients[ip] = {
@@ -130,7 +130,7 @@ async def websocket_feed(request):
 			frame = await store.subscribe()
 			await ws.send_bytes(frame)
 			# global total bytes
-			request.app['bytes_sent'] += len(frame)
+			request.app.state.bytes_sent += len(frame)
 			# per‐IP bytes
 			clients[ip]["bytes_sent"] += len(frame)
 	except asyncio.CancelledError:
@@ -228,10 +228,10 @@ async def main():
 
 	# setup web server
 	app = web.Application()
-	app['store'] = store
-	app['clients'] = {}       # dict[ip] → {"since": <epoch>, "bytes_sent": <int>}
-	app['bytes_sent'] = 0     # total bytes sent (since start)
-	app['start_time'] = time.time()
+	app.state.store = store
+	app.state.clients = {}       # dict[ip] → {"since": <epoch>, "bytes_sent": <int>}
+	app.state.bytes_sent = 0     # total bytes sent (since start)
+	app.state.start_time = time.time()
 
 	app.add_routes([
 		web.get('/stream', mjpeg_stream),
