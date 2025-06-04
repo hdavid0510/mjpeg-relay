@@ -1,47 +1,71 @@
 body {
+	background-color: #1e1e1e;
+	color: #e0e0e0;
 	font-family: Arial, sans-serif;
-	background-color: #f7f9fb;
-	color: #333;
 	padding: 20px;
 }
+
 h1 {
+	color: #fafafa;
 	margin-bottom: 10px;
 }
+
 #metrics {
 	display: flex;
 	gap: 30px;
 	margin-bottom: 20px;
 }
+
 .metric-box {
-	background: #fff;
+	background: #2e2e2e;
+	color: #ffffff;
 	padding: 15px 20px;
 	border-radius: 8px;
-	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 	min-width: 150px;
 }
+
 .metric-box h2 {
+	color: #cccccc;
 	margin: 0 0 5px;
 	font-size: 1.2em;
 }
+
 .metric-value {
 	font-size: 1.5em;
 	font-weight: bold;
+	color: #ffffff;
 }
+
 table {
 	width: 100%;
 	border-collapse: collapse;
 	margin-top: 10px;
+	background-color: #2b2b2b;
+	color: #e0e0e0;
 }
+
 th, td {
 	padding: 8px 12px;
-	border: 1px solid #ddd;
+	border: 1px solid #3a3a3a;
 	text-align: left;
 }
+
 th {
-	background-color: #f0f0f0;
+	background-color: #3a3a3a;
+	color: #fafafa;
 }
+
+tbody tr:nth-child(even) {
+	background-color: #292929;
+}
+
+tbody tr:nth-child(odd) {
+	background-color: #242424;
+}
+
 #footer {
 	margin-top: 30px;
 	font-size: 0.9em;
-	color: #666;
+	color: #aaaaaa;
 }
