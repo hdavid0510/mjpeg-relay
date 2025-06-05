@@ -112,3 +112,21 @@ function fetchStatus() {
 // Initial fetch, then refresh every 2.5 seconds
 fetchStatus();
 setInterval(fetchStatus, 2500);
+
+// Restart button listener
+document.addEventListener('DOMContentLoaded', () => {
+	const btn = document.getElementById('restart_btn');
+	if (btn) {
+		btn.addEventListener('click', () => {
+			if (confirm("Are you sure you want to restart the relay?")) {
+				fetch('/restart', { method: 'POST' })
+					.then(() => {
+						// Optionally disable the button or show a message
+						btn.disabled = true;
+						btn.textContent = 'Restarting…';
+					})
+					.catch(err => console.error('Restart failed:', err));
+			}
+		});
+	}
+});

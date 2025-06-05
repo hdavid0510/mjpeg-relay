@@ -187,6 +187,13 @@ async def dashboard(request):
 	return web.Response(body=text, content_type="text/html")
 
 
+async def restart_relay(request):
+	"""Exit the process so that Docker can restart the container."""
+	loop = asyncio.get_event_loop()
+	loop.call_later(0.1, lambda: os._exit(0))
+	return web.Response(text="Restarting relay...", content_type="text/plain")
+
+
 def parse_cli():
 	"""Parse CLI args; shrink traceback if no SOURCE_URL is given"""
 	parser = argparse.ArgumentParser(
@@ -254,6 +261,7 @@ async def main():
 		web.get('/ws', websocket_feed),
 		web.get('/status', status_report),
 		web.get('/dashboard', dashboard),
+		web.get('/restart', restart_relay),
 	])
 
 	static_folder = os.path.join(os.path.dirname(__file__), "static")
