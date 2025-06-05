@@ -4,7 +4,6 @@ import sys
 import os
 import types
 import time
-from datetime import datetime, timedelta
 import argparse
 import asyncio
 import aiohttp
@@ -191,6 +190,7 @@ async def restart_relay(request):
 	"""Exit the process so that Docker can restart the container."""
 	loop = asyncio.get_event_loop()
 	loop.call_later(0.1, lambda: os._exit(0))
+	print("Received restart request.")
 	return web.Response(text="Restarting relay...", content_type="text/plain")
 
 
