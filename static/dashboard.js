@@ -122,6 +122,10 @@ if (restartBtn) {
 				.then(() => {
 					restartBtn.disabled = true;
 					restartBtn.textContent = 'Restarting…';
+					// Reload after 8 seconds so that the button/text returns to normal
+					setTimeout(() => {
+						window.location.reload();
+					}, 8000);
 				})
 				.catch(err => console.error('Restart failed:', err));
 		}
