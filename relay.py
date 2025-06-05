@@ -261,7 +261,7 @@ async def main():
 		web.get('/ws', websocket_feed),
 		web.get('/status', status_report),
 		web.get('/dashboard', dashboard),
-		web.get('/restart', restart_relay),
+		web.post('/restart', restart_relay),
 	])
 
 	static_folder = os.path.join(os.path.dirname(__file__), "static")
