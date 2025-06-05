@@ -307,10 +307,10 @@ async def main():
 	app.state = types.SimpleNamespace()
 	app.state.store      = store
 	app.state.clients    = {}
-	app.state.prev_bytes = 0
+	app.state.start_time = time.time()
 	app.state.prev_time  = app.state.start_time
 	app.state.bytes_sent = 0
-	app.state.start_time = time.time()
+	app.state.prev_bytes = 0
 
 	app.add_routes([
 		web.get('/stream', mjpeg_stream),
