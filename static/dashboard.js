@@ -58,7 +58,6 @@ function fetchStatus() {
 			const onlineCount = data.clients.filter(c => c.online).length;
 			document.getElementById('connection_count').textContent = onlineCount;
 
-
 			const tbody = document.getElementById('client_table_body');
 			tbody.innerHTML = ''; // clear existing
 			if (!data.clients || data.clients.length === 0) {
@@ -115,19 +114,22 @@ setInterval(fetchStatus, 2500);
 
 // Restart button listener
 const restartBtn = document.getElementById('restart_btn');
-if (restartBtn) {
+const overlay = document.getElementById('overlay');
+if (restartBtn && overlay) {
 	restartBtn.addEventListener('click', () => {
-		if (confirm("Are you sure you want to restart the relay?")) {
-			fetch('/restart', { method: 'POST' })
-				.then(() => {
-					restartBtn.disabled = true;
-					restartBtn.textContent = 'Restarting…';
-					// Reload after 8 seconds so that the button/text returns to normal
-					setTimeout(() => {
-						window.location.reload();
-					}, 8000);
-				})
-				.catch(err => console.error('Restart failed:', err));
+		if (!confirm("Are you sure you want to restart the relay?")) {
+			return;
 		}
+
+		document.body.classList.add('loading');	// Add `loading` class so CSS disables all other pointer-events
+		overlay.style.display = 'flex';	// Show overlay (flex to center spinner/message)
+
+		fetch('/restart', { method: 'POST' })
+			.then(() => {
+				setTimeout(() => {
+					window.location.reload();
+				}, 4000);
+			})
+			.catch(err => console.error('Restart failed:', err));
 	});
 }
