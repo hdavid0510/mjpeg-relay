@@ -52,7 +52,7 @@ function fetchStatus() {
 	fetch('/status')
 		.then(response => response.json())
 		.then(data => {
-			document.getElementById('uptime').textContent = formatHMS(data.uptime);
+			document.getElementById('uptime').textContent = formatHMS(Date.now()/1000 - data.upsince);
 			document.getElementById('received').textContent = humanBytes(data.inbound_bytes);
 			document.getElementById('bandwidth').textContent = humanBps(data.inbound_bps);
 			const onlineCount = data.clients.filter(c => c.online).length;

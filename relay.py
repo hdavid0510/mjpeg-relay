@@ -214,7 +214,7 @@ async def status_report(request):
 		})
 
 	payload = {
-		"uptime":        now - app.state.start_time, # raw seconds
+		"upsince":       app.state.start_time,       # raw seconds
 		"inbound_bytes": total_bytes,
 		"inbound_bps":   inst_bps,                   # instantaneous rate (bytes/sec)
 		"clients":       client_list                 # all clients ever seen during this run
